@@ -1,0 +1,101 @@
+---
+- name: Configure relay-main Host
+  hosts: all
+  become: true
+  vars:
+    deploy_user: "{{ ansible_user }}"
+
+  handlers:
+    - name: reload nftables
+      ansible.builtin.systemd:
+        name: nftables
+        state: reloaded
+
+    - name: restart fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: restarted
+
+  tasks:
+    - name: Install system dependencies
+      ansible.builtin.apt:
+        name:
+          - podman
+          - podman-docker
+          - docker-compose
+          - podman-compose
+          - nftables
+          - fail2ban
+          - unattended-upgrades
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Enable apt timers used by unattended-upgrades
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop:
+        - apt-daily.timer
+        - apt-daily-upgrade.timer
+
+    - name: Enable automatic security updates
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+          APT::Periodic::AutocleanInterval "7";
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Ensure target directory exists and is owned by the deployment user
+      ansible.builtin.file:
+        path: /opt/stoat-turn
+        state: directory
+        owner: "{{ deploy_user }}"
+        group: "{{ deploy_user }}"
+        mode: "0755"
+
+    - name: Allow rootless Podman to bind ports 80 and above
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/60-rootless-podman-ports.conf
+        content: |
+          net.ipv4.ip_unprivileged_port_start = 80
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Apply sysctl settings
+      ansible.builtin.command:
+        cmd: sysctl --system
+      changed_when: false
+
+    - name: Install nftables policy
+      ansible.builtin.template:
+        src: templates/nftables.conf.j2
+        dest: /etc/nftables.conf
+        owner: root
+        group: root
+        mode: "0644"
+      notify: reload nftables
+
+    - name: Install fail2ban jail configuration
+      ansible.builtin.template:
+        src: templates/jail.local.j2
+        dest: /etc/fail2ban/jail.local
+        owner: root
+        group: root
+        mode: "0644"
+      notify: restart fail2ban
+
+    - name: Enable nftables and fail2ban
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop:
+        - nftables
+        - fail2ban

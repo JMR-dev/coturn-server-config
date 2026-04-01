@@ -1,0 +1,41 @@
+name: 01 - Build and Push Images
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "docker/**"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Coturn image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/coturn
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/stoat-coturn:4.9.0-trixie
+
+      - name: Build and push Caddy WAF image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker/caddy
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/stoat-caddy-waf:latest

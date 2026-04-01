@@ -1,0 +1,34 @@
+{
+  email {$CADDY_EMAIL:ops@example.com}
+  order coraza_waf first
+  admin off
+}
+
+{$CADDY_DOMAIN:localhost} {
+  log {
+    output stdout
+    format console
+  }
+
+  encode zstd gzip
+
+  header {
+    X-Content-Type-Options nosniff
+    X-Frame-Options DENY
+    Referrer-Policy no-referrer
+  }
+
+  @health path /healthz
+  respond @health 200 "ok"
+
+  coraza_waf {
+    load_owasp_crs
+    directives `
+      SecRuleEngine On
+      SecRequestBodyAccess On
+      SecAuditEngine RelevantOnly
+    `
+  }
+
+  reverse_proxy {$STOAT_UPSTREAM:http://host.containers.internal:8080}
+}

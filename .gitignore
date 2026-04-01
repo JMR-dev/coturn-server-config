@@ -1,0 +1,8 @@
+.codex
+.env
+.terraform/
+.terraform.lock.hcl
+*.retry
+*.tfstate
+*.tfstate.*
+compose/.env
