@@ -4,7 +4,7 @@
   admin off
 }
 
-{$CADDY_DOMAIN:localhost} {
+{$TURN_REALM:localhost} {
   log {
     output stdout
     format console
@@ -18,9 +18,6 @@
     Referrer-Policy no-referrer
   }
 
-  @health path /healthz
-  respond @health 200 "ok"
-
   coraza_waf {
     load_owasp_crs
     directives `
@@ -30,5 +27,9 @@
     `
   }
 
-  reverse_proxy {$STOAT_UPSTREAM:http://host.containers.internal:8080}
+  route {
+    @health path /health /healthz
+    respond @health "Stoat Relay is Online" 200
+    respond 403
+  }
 }
