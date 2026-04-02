@@ -31,11 +31,11 @@ jobs:
         with:
           context: ./docker/coturn
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/stoat-coturn:4.9.0-trixie
+          tags: ghcr.io/${{ github.repository_owner,, }}/stoat-coturn:4.9.0-trixie
 
       - name: Build and push Caddy WAF image
         uses: docker/build-push-action@v5
         with:
           context: ./docker/caddy
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/stoat-caddy-waf:latest
+          tags: ghcr.io/${{ github.repository_owner,, }}/stoat-caddy-waf:latest
