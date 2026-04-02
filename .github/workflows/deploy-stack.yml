@@ -8,14 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: read
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      TF_VAR_gcp_project: ${{ vars.GCP_PROJECT || 'stoat-burrow' }}
-      TF_VAR_gcp_region: ${{ vars.GCP_REGION || 'us-west1' }}
-      TF_VAR_gcp_zone: ${{ vars.GCP_ZONE || 'us-west1-b' }}
+      TF_VAR_gcp_project: ${{ secrets.GCP_PROJECT  }}
+      TF_VAR_gcp_region: ${{ vars.GCP_REGION }}
+      TF_VAR_gcp_zone: ${{ vars.GCP_ZONE }}
 
     steps:
       - name: Checkout repository
@@ -49,16 +45,12 @@ jobs:
         shell: bash
         run: |
           cat > backend.hcl <<EOF
-          bucket = "stoat-tofu-state"
           key = "webrtc-relay/terraform.tfstate"
-          region = "us-east-2"
           endpoints = {
-            s3 = "https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com"
+            s3 = ${{ secrets.R2_ENDPOINT_URL }}
           }
-          skip_credentials_validation = true
-          skip_region_validation = true
-          skip_requesting_account_id = true
-          skip_s3_checksum = true
+          access_key = "${{ secrets.R2_ACCESS_KEY_ID }}"
+          secret_key = "${{ secrets.R2_SECRET_ACCESS_KEY }}"
           EOF
 
       - name: Tofu init and apply
@@ -68,18 +60,18 @@ jobs:
         run: |
           tofu init -backend-config=backend.hcl
           tofu apply -auto-approve -input=false
-          echo "STATIC_IP=$(tofu output -raw relay_ip)" >> "${GITHUB_ENV}"
+          echo "${{ secrets.STATIC_IP }}=$(tofu output -raw relay_ip)" >> "${GITHUB_ENV}"
 
       - name: Wait for SSH
         shell: bash
         run: |
           for attempt in {1..30}; do
-            if nc -z -w 5 "${STATIC_IP}" 22; then
+            if nc -z -w 5 "${${{ secrets.STATIC_IP }}}" 22; then
               exit 0
             fi
             sleep 10
           done
-          echo "SSH did not become reachable on ${STATIC_IP}" >&2
+          echo "SSH did not become reachable on ${${{ secrets.STATIC_IP }}}" >&2
           exit 1
 
       - name: Run Ansible Playbook
@@ -90,13 +82,13 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           inventory: |
             [turn_nodes]
-            ${{ env.STATIC_IP }} ansible_user=ubuntu
+            ${{ secrets.STATIC_IP }} ansible_user=ubuntu
           options: --ssh-common-args='-o StrictHostKeyChecking=no'
 
       - name: SCP compose and config files
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ env.STATIC_IP }}
+          host: ${{ secrets.STATIC_IP }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "compose/*"
@@ -106,22 +98,18 @@ jobs:
       - name: Deploy Podman compose stack
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ env.STATIC_IP }}
+          host: ${{ secrets.STATIC_IP }}
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             set -eu
             cd /opt/stoat-turn
             cat > .env <<EOF
-            STATIC_IP=${{ env.STATIC_IP }}
+            STATIC_IP = ${{ secrets.STATIC_IP }}
             GITHUB_REPOSITORY_OWNER=${{ github.repository_owner }}
-            TURN_REALM=${{ vars.TURN_REALM || 'turn.example.com' }}
+            TURN_REALM=${{ secrets.TURN_REALM }}
             TURN_SHARED_SECRET=${{ secrets.TURN_SHARED_SECRET }}
-            CADDY_DOMAIN=${{ vars.CADDY_DOMAIN || 'relay.example.com' }}
-            CADDY_EMAIL=${{ vars.CADDY_EMAIL || 'ops@example.com' }}
-            STOAT_UPSTREAM=${{ vars.STOAT_UPSTREAM || 'http://host.containers.internal:8080' }}
-            TURN_TLS_CERT_FILE=${{ vars.TURN_TLS_CERT_FILE }}
-            TURN_TLS_KEY_FILE=${{ vars.TURN_TLS_KEY_FILE }}
+            CADDY_EMAIL=${{ secrets.CADDY_EMAIL }}
             EOF
 
             printf '%s\n' "${{ secrets.GITHUB_TOKEN }}" | podman login ghcr.io -u "${{ github.actor }}" --password-stdin

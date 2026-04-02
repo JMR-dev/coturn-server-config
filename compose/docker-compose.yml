@@ -7,9 +7,8 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      CADDY_DOMAIN: ${CADDY_DOMAIN}
       CADDY_EMAIL: ${CADDY_EMAIL}
-      STOAT_UPSTREAM: ${STOAT_UPSTREAM}
+      TURN_REALM: ${TURN_REALM}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -19,17 +18,16 @@ services:
     image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/stoat-coturn:4.9.0-trixie
     container_name: coturn-relay
     restart: always
+    depends_on:
+      - caddy
     network_mode: host
     environment:
       EXTERNAL_IP: ${STATIC_IP}
       TURN_REALM: ${TURN_REALM}
       TURN_SHARED_SECRET: ${TURN_SHARED_SECRET}
-      TURN_TLS_CERT_FILE: ${TURN_TLS_CERT_FILE:-}
-      TURN_TLS_KEY_FILE: ${TURN_TLS_KEY_FILE:-}
-      TURN_TLS_LISTENING_PORT: ${TURN_TLS_LISTENING_PORT:-5349}
     volumes:
       - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
-      - caddy_data:/caddy-data:ro
+      - caddy_data:/caddy-certs:ro
 
 volumes:
   caddy_data:
