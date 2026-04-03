@@ -48,7 +48,7 @@ resource "google_compute_firewall" "webrtc_rules" {
 
   allow {
     protocol = "udp"
-    ports    = ["3478", "5349", "49152-65535"]
+    ports    = ["3478", "49152-65535"]
   }
 
   target_tags = ["webrtc-outpost", "caddy-web"]

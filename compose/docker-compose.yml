@@ -14,9 +14,9 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
-  coturn:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/stoat-coturn:4.9.0-trixie
-    container_name: coturn-relay
+  turn:
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/stoat-turn-server:4.0.1
+    container_name: turn-relay
     restart: always
     depends_on:
       - caddy
@@ -26,7 +26,7 @@ services:
       TURN_REALM: ${TURN_REALM}
       TURN_SHARED_SECRET: ${TURN_SHARED_SECRET}
     volumes:
-      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - ./turn-server.toml:/etc/turn-server/config.toml.tmpl:ro
       - caddy_data:/caddy-certs:ro
 
 volumes:

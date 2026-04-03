@@ -1,4 +1,4 @@
-FROM coturn/coturn:4.9.0-trixie
+FROM ghcr.io/mycrl/turn-server:4.0.1
 
 COPY --chmod=0755 entrypoint.sh /usr/local/bin/entrypoint.sh
 

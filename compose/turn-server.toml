@@ -1,0 +1,32 @@
+# Rendered at container start by docker/turn-server/entrypoint.sh.
+
+[server]
+port-range = "49152..65535"
+realm = "__TURN_REALM__"
+
+[[server.interfaces]]
+transport = "udp"
+listen = "0.0.0.0:3478"
+external = "__EXTERNAL_IP__:3478"
+
+[[server.interfaces]]
+transport = "tcp"
+listen = "0.0.0.0:3478"
+external = "__EXTERNAL_IP__:3478"
+
+[[server.interfaces]]
+transport = "tcp"
+listen = "0.0.0.0:5349"
+external = "__EXTERNAL_IP__:5349"
+
+[server.interfaces.ssl]
+private-key = "__TLS_KEY_FILE__"
+certificate-chain = "__TLS_CERT_FILE__"
+
+[log]
+level = "info"
+stdout = true
+
+[auth]
+enable-hooks-auth = false
+static-auth-secret = "__TURN_SHARED_SECRET__"

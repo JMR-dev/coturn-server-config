@@ -32,12 +32,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Coturn image
+      - name: Build and push TURN server image
         uses: docker/build-push-action@v5
         with:
-          context: ./docker/coturn
+          context: ./docker/turn-server
           push: true
-          tags: ghcr.io/${{ env.OWNER_LC }}/stoat-coturn:4.9.0-trixie
+          tags: ghcr.io/${{ env.OWNER_LC }}/stoat-turn-server:4.0.1
 
       - name: Build and push Caddy WAF image
         uses: docker/build-push-action@v5

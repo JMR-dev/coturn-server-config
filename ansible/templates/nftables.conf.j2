@@ -15,7 +15,7 @@ table inet filter {
 
     tcp dport 22 accept
     tcp dport { 80, 443, 3478, 5349 } accept
-    udp dport { 3478, 5349 } accept
+    udp dport 3478 accept
     udp dport 49152-65535 accept
   }
 
